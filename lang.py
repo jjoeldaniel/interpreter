@@ -73,9 +73,7 @@ class Lexer:
                 decimals += 1
                 self.advance()
                 if decimals > 1:
-                    raise GenericError(
-                        self.pos, self.pos, "Invalid number: too many decimals"
-                    )
+                    raise GenericError(self.pos, "Invalid number: too many decimals")
             elif not char.isdigit() or is_last:
                 token = None
 
@@ -94,7 +92,7 @@ class Lexer:
             else:
                 self.advance()
 
-        raise GenericError(self.pos, self.pos, "Invalid number")
+        raise GenericError(self.pos, "Invalid number")
 
 
 def run(text: str):
