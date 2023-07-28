@@ -3,8 +3,11 @@ import lang
 
 def run():
     while True:
-        res = lang.run(input("> "))
-        print(res)
+        output, error = lang.run(file_name="stdin", text=input("> "))
+        if error:
+            print(error)
+        else:
+            print(output)
 
 
 if __name__ == "__main__":

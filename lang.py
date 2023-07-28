@@ -1,5 +1,5 @@
 from enum import Enum
-from errors import GenericError
+from errors import GenericError, IllegalCharacterError
 
 
 class TokenType(Enum):
@@ -9,10 +9,12 @@ class TokenType(Enum):
     DIV = "DIV"
     INT = "INT"
     FLOAT = "FLOAT"
+    LPAREN = "LPAREN"
+    RPAREN = "RPAREN"
 
 
 class Token:
-    def __init__(self, type_: TokenType, value):
+    def __init__(self, type_: TokenType, value: int | float | str | None = None):
         self.type = type_
         self.value = value
 
@@ -22,18 +24,52 @@ class Token:
         return f"{self.type}"
 
 
+class Position:
+    def __init__(
+        self, file_name: str, file_text: str, index: int, line: int, column: int
+    ):
+        self.file_name = file_name
+        self.file_text = file_text
+        self.index = index
+        self.line = line
+        self.column = column
+
+    def advance(self, current_char: str | None = None):
+        self.index += 1
+        self.column += 1
+
+        # TODO: Fix line not incrementing
+        if current_char == "\n":
+            self.line += 1
+            self.column = 0
+
+        return self
+
+    def copy(self):
+        return Position(
+            self.file_name, self.file_text, self.index, self.line, self.column
+        )
+
+
 class Lexer:
-    def __init__(self, text: str):
+    def __init__(self, file_name: str, text: str):
         self.text = text
-        self.pos = -1
+        self.file_name = file_name
+        self.position = Position(
+            file_name=self.file_name, file_text=self.text, index=-1, line=0, column=-1
+        )
         self.curr_char = None
         self.advance()
 
     def advance(self):
-        self.pos += 1
-        self.curr_char = self.text[self.pos] if self.pos < len(self.text) else None
+        self.position.advance(self.curr_char)
+        self.curr_char = (
+            self.text[self.position.column]
+            if self.position.column < len(self.text)
+            else None
+        )
 
-    def tokenize(self):
+    def tokenize(self) -> tuple[list[Token], GenericError | None]:
         tokens: list[Token] = []
         skip_chars = {" ", "\t", "\n"}
 
@@ -42,38 +78,63 @@ class Lexer:
                 self.advance()
 
             if self.curr_char.isdigit():
-                tokens.append(self.generate_number())
+                num = self.generate_number()
 
-            match self.curr_char:
-                case "+":
-                    tokens.append(Token(TokenType.PLUS, self.curr_char))
-                    self.advance()
-                case "-":
-                    tokens.append(Token(TokenType.MINUS, self.curr_char))
-                    self.advance()
-                case "*":
-                    tokens.append(Token(TokenType.MUL, self.curr_char))
-                    self.advance()
-                case "/":
-                    tokens.append(Token(TokenType.DIV, self.curr_char))
-                    self.advance()
-                case _:
-                    self.advance()
+                if isinstance(num, GenericError):
+                    return [], num
 
-        return tokens
+                tokens.append(num)
+            else:
+                match self.curr_char:
+                    case "+":
+                        tokens.append(Token(TokenType.PLUS, self.curr_char))
+                        self.advance()
+                    case "-":
+                        tokens.append(Token(TokenType.MINUS, self.curr_char))
+                        self.advance()
+                    case "*":
+                        tokens.append(Token(TokenType.MUL, self.curr_char))
+                        self.advance()
+                    case "/":
+                        tokens.append(Token(TokenType.DIV, self.curr_char))
+                        self.advance()
+                    case "(":
+                        tokens.append(Token(TokenType.LPAREN, self.curr_char))
+                        self.advance()
+                    case ")":
+                        tokens.append(Token(TokenType.RPAREN, self.curr_char))
+                        self.advance()
+                    case _:
+                        char = self.curr_char
+                        self.advance()
+                        return [], IllegalCharacterError(
+                            self.file_name,
+                            self.text,
+                            self.position.line,
+                            self.position.column,
+                            char,
+                        )
 
-    def generate_number(self) -> Token:
+        return tokens, None
+
+    def generate_number(self) -> Token | GenericError:
         decimals = 0
-        start_pos = self.pos
+        start_col = self.position.column
 
-        for char in self.text[start_pos:]:
-            is_last: bool = self.pos == len(self.text) - 1
+        for char in self.text[start_col:]:
+            is_last: bool = self.position.column == len(self.text) - 1
 
             if char == ".":
                 decimals += 1
                 self.advance()
                 if decimals > 1:
-                    raise GenericError(self.pos, "Invalid number: too many decimals")
+                    return GenericError(
+                        self.file_name,
+                        self.text,
+                        self.position.line,
+                        self.position.column,
+                        "Invalid number: too many decimals",
+                    )
             elif not char.isdigit() or is_last:
                 token = None
 
@@ -82,19 +143,28 @@ class Lexer:
 
                 if decimals > 0:
                     token = Token(
-                        TokenType.FLOAT, float(self.text[start_pos : self.pos])
+                        TokenType.FLOAT,
+                        float(self.text[start_col : self.position.column]),
                     )
                 else:
-                    token = Token(TokenType.INT, int(self.text[start_pos : self.pos]))
+                    token = Token(
+                        TokenType.INT, int(self.text[start_col : self.position.column])
+                    )
 
                 return token
 
             else:
                 self.advance()
 
-        raise GenericError(self.pos, "Invalid number")
+        return GenericError(
+            self.file_name,
+            self.text,
+            self.position.line,
+            self.position.column,
+            "Invalid number",
+        )
 
 
-def run(text: str):
-    lexer = Lexer(text)
+def run(file_name: str, text: str):
+    lexer = Lexer(file_name=file_name, text=text)
     return lexer.tokenize()
