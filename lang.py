@@ -89,9 +89,6 @@ class Lexer:
                 else:
                     token = Token(TokenType.INT, int(self.text[start_pos : self.pos]))
 
-                if char.isdigit():
-                    self.advance()
-
                 return token
 
             else:
