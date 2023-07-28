@@ -1,4 +1,4 @@
-import lang
+import interpreter.lang as lang
 
 
 def run():
