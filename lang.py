@@ -38,7 +38,6 @@ class Position:
         self.index += 1
         self.column += 1
 
-        # TODO: Fix line not incrementing
         if current_char == "\n":
             self.line += 1
             self.column = 0
@@ -105,13 +104,13 @@ class Lexer:
                         tokens.append(Token(TokenType.RPAREN, self.curr_char))
                         self.advance()
                     case _:
+                        pos_start = self.position.copy()
                         char = self.curr_char
                         self.advance()
                         return [], IllegalCharacterError(
                             self.file_name,
-                            self.text,
-                            self.position.line,
-                            self.position.column,
+                            pos_start,
+                            self.position,
                             char,
                         )
 
@@ -125,14 +124,14 @@ class Lexer:
             is_last: bool = self.position.column == len(self.text) - 1
 
             if char == ".":
+                pos_start = self.position.copy()
                 decimals += 1
                 self.advance()
                 if decimals > 1:
                     return GenericError(
                         self.file_name,
-                        self.text,
-                        self.position.line,
-                        self.position.column,
+                        pos_start,
+                        self.position,
                         "Invalid number: too many decimals",
                     )
             elif not char.isdigit() or is_last:
@@ -158,9 +157,8 @@ class Lexer:
 
         return GenericError(
             self.file_name,
-            self.text,
-            self.position.line,
-            self.position.column,
+            self.position,
+            self.position,
             "Invalid number",
         )
 

@@ -1,25 +1,33 @@
 class GenericError:
     def __init__(
-        self, file_name: str, file_text: str, line: int, column: int, message: str
+        self,
+        file_name: str,
+        pos_start,
+        pos_end,
+        message: str,
     ):
         self.file_name = file_name
-        self.file_text = file_text
-        self.line = line
-        self.column = column
+        self.pos_start = pos_start
+        self.pos_end = pos_end
         self.message = message
 
     def __str__(self):
-        message = f'File "{self.file_name}"'
-        message += (
-            f"\nError: {self.message} at line {self.line+1}, column {self.column}"
-        )
+        message = f"\nError: {self.message} at line {self.pos_start.line+1}, column {self.pos_start.column}"
+        message += f'\nFile "{self.file_name}", line {self.pos_start.line+1}'
         return message
 
 
 class IllegalCharacterError(GenericError):
     def __init__(
-        self, file_name: str, file_text: str, line: int, column: int, char: str
+        self,
+        file_name: str,
+        pos_start,
+        pos_end,
+        char: str,
     ):
         super().__init__(
-            file_name, file_text, line, column, f"Illegal character '{char}'"
+            file_name,
+            pos_start,
+            pos_end,
+            f"Illegal character '{char}'",
         )
