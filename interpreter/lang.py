@@ -1,3 +1,4 @@
+from __future__ import annotations
 from interpreter.errors import GenericError, IllegalCharacterError
 from interpreter.token import Token, TokenType
 
@@ -12,7 +13,7 @@ class Position:
         self.line = line
         self.column = column
 
-    def advance(self, current_char: str | None = None):
+    def advance(self, current_char: str | None = None) -> Position:
         self.index += 1
         self.column += 1
 
@@ -22,7 +23,7 @@ class Position:
 
         return self
 
-    def copy(self):
+    def copy(self) -> Position:
         return Position(
             self.file_name, self.file_text, self.index, self.line, self.column
         )
